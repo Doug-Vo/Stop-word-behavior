@@ -26,8 +26,8 @@ Reuters:
 """
 """
 Nps_chat:
-    # Using chatrooms and their corresponding id as categories
-    List categories        : nps_chat.fileids()
+    # Using class of posts as categories
+    List fileids           : nps_chat.fileids()
     # Assuming each post as doc, each post is list of tokens/words
     Get docs in category   : nps_chat.posts(fileid)
     Get text               : " ".join(nps_chat.posts(fileid)[0])
@@ -547,7 +547,7 @@ def step_6_get_avg_word_score(category_list: dict):
 
     word_score[word] = (avg chara, avg disc, avg score, count) 
     """
-    ## chara_threshold = 0.0
+    # chara_threshold = 0.0
     # disc_threshold = 0.3 not used with duc vo"s method
     # score = (chara - abs(disc))
     # word_score[word] = (avg_chara, avg_disc, avg_score, count),
@@ -735,13 +735,13 @@ def step_7(
 
     nps_df = word_score2df(nps_word_scores)
     nps_df = nps_df.sort_values(by="stopword score", ascending=False)
-    nps_top50 = reuters_df.head(50).copy()
+    nps_top50 = nps_df.head(50).copy()
     plot_df(
         nps_top50,
         x_key="phi",
         y_key="abs delta",
-        xlab = "phi",
-        ylab = "abs delta",
+        xlab="phi",
+        ylab="abs delta",
         hue_key="abs delta",
         title="Top 50 Stopwords (Nps chat)",
         legend_title="abs delta",
@@ -985,6 +985,7 @@ def step_10(
     reuters_cluster_summary = get_cluster_summary(
         top_terms,
         model,
+        model_name,
         nclusters=nclusters,
     )
     pickle_write(reuters_result_path+f"{model_name}_cluster_summary.pkl", reuters_cluster_summary)
@@ -1007,6 +1008,7 @@ def step_10(
     nps_cluster_summary = get_cluster_summary(
         top_terms,
         model,
+        model_name,
         nclusters=nclusters,
     )
     pickle_write(nps_result_path+f"{model_name}_cluster_summary.pkl", nps_cluster_summary)
@@ -1025,6 +1027,7 @@ def step_10(
     nltk_cluster_summary = get_cluster_summary(
         list(EN_STOPWORDS),
         model,
+        model_name,
         nclusters=nclusters
     )
     pickle_write(nltk_result_path+f"{model_name}_cluster_summary.pkl", nltk_cluster_summary)
@@ -1220,8 +1223,8 @@ def main():
     nps_stopwords_path7 = nps_data_path + "step7_stopwords/"
     if all_paths_exist([reuter_word_score_path, nps_word_score_path]) and not all_paths_exist([reuters_stopwords_path7, nps_stopwords_path7]):
         print("\nStep7, 2D representaion of the 50 most approriate stopwords from step 6")
-        reuters_word_scores = pickle_read(reuters_stopwords_path6 + "word_scores.pkl")
-        nps_word_scores = pickle_read(nps_stopwords_path6 + "word_scores.pkl")
+        reuters_word_scores = pickle_read(reuter_word_score_path)
+        nps_word_scores = pickle_read(nps_word_score_path)
         step_7(
             reuters_word_scores,
             nps_word_scores,
