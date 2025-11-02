@@ -1,10 +1,8 @@
 import pickle
-from pydoc import doc
 import re
 from pathlib import Path
 import string
 from collections import defaultdict
-from turtle import down, title
 import nltk
 from nltk.corpus import reuters, nps_chat, stopwords, wordnet
 from nltk import pos_tag, word_tokenize
@@ -13,7 +11,6 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.manifold import TSNE
 from gensim import downloader
-#from gensim.models import KeyedVectors
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
