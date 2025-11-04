@@ -96,6 +96,49 @@ This notebook implements the **Armano et al.** method and conducts the `statisti
 To **re-run** a long calculation (e.g., Task 1, 2, 4,..), delete the corresponding .pkl file (e.g., `task1.pkl`) from the pkl_folder and re-run that cell. 
 ```
 
+## `Roope Tukiainen` - Analysis of Stopword Behavior in NLTK Reuters and NPS Chat corpuses.
+
+### 1. Dataset and Models
+
+* **NLTK Reuters:** NLTK Reuters-21578 Distribution 1.0. Unbalanced dataset with 90 categories, 10 788 unique documents, and 2 505 678 tokensin total.
+
+* **NLTK NPS Chat:** NLTK NPS Chat Release 1.0. Unbalanced dataset with 15 categories, 10 567 unique posts, and 47 155 tokens in total.
+ 
+* **Embedding Models:**
+    * Word2Vec  (gensim.downloader.load("word2vec-google-news-300"))
+    * FastText  (gensim.downloader.load("fasttext-wiki-news-subwords-300"))
+    * Glove     (gensimdownloader.load("glove-twitter-100"))
+
+### 2. Installation
+
+This project was developed in python 3.10.18 with libraries:
+nltk: Used with tokenization, preprocessing, and as a source for corpuses Reuters and NPS Chat.
+scikit-learn: K-means algorithm for clustering and t-SNE for dimensionality reduction.
+gensim: Used for embedding models and as their downloader.
+numpy: Arithematic
+pandas: Data manipulation in tabular form.
+seaborn and matplotlib: Used for graphical representations of the data.
+
+
+```bash
+# All dependencies can be installed from roope/requirements.txt
+pip install -r requirements.txt
+
+# Alternative
+pip install nltk pandas numpy scikit-learn gensim matplotlib seaborn
+```
+
+### 3. Project Workflow
+The code (calculations.py) does all necessary calculations for the analysis and saves the results in the current directory by making necessary files and folders. Some graphical representations are also made and saved into .png files. 
+The code has been split into different steps and it will check whether the necessary steps have been completed by checking the current directory for the folders and files it should have created. If those files or directories are not found it will start to recompute everything.
+
+First time downloading all necessary models and corpuses may take time. Step 3 is relative slow and step 6 is extremely long (3 hours on I7-9700k processor). Other steps are rather quick.
+
+### 4. How to Run
+
+- Create a folder in which you will run the calculations.py script and the results will be saved there.
+
+- python calculations.py, should take care of everything and you only need to wait for it complete. It will print of its progress to the console at times, but doesn't estimate how long it will take.
 
 
 ## **References**
@@ -128,11 +171,3 @@ To **re-run** a long calculation (e.g., Task 1, 2, 4,..), delete the correspondi
 
 * **Google (n.d.). *Noto Sans Font Family*. Google Fonts.**
     * (Available at: https://fonts.google.com/noto/specimen/Noto+Sans)
-
-
-
-## `Roope Tukiainen`
-
-Python 3.10
-
-Roope: Python 3.10.18
