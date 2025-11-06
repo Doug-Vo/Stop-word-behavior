@@ -104,22 +104,6 @@ def categorize_nps_chat() -> dict:
         if processed_tokens:
             category_docs[category][post_id] = processed_tokens
 
-
-    """
-    old way
-    category_docs = {}
-    categories = nps_chat.fileids()
-    for category in categories:
-        xml_posts = nps_chat.xml_posts(category)
-        docs = {}
-        for id, post in enumerate(xml_posts):
-            post_id = f"{id}"
-            tokens = word_tokenize(post.text)
-            processed_tokens = preprocess_tokens(tokens)
-            if processed_tokens:
-                docs[post_id] = processed_tokens
-        category_docs[category] = docs
-    """
     return category_docs
 
 def preprocess_tokens(tokens: list[str]) -> list[str]:
@@ -127,13 +111,13 @@ def preprocess_tokens(tokens: list[str]) -> list[str]:
     Each token into lowercase and remove tokens that are punctuation or digits
     """
     processed_tokens = []
-    remove_chars = string.punctuation
-    translator = str.maketrans("", "", remove_chars)
+    #remove_chars = string.punctuation
+    #translator = str.maketrans("", "", remove_chars)
     for t in tokens:
         # remove punctuations
-        t = t.translate(translator)
-        # into lowercase and strip whitespace
-        t = t.lower().strip()
+        #t = t.translate(translator)
+        # into lowercase and strip whitespace, remove punctuations from start and end.
+        t = t.lower().strip().strip(string.punctuation)
         # Keep non-empty and not digit tokens
         if t and not t.isdigit():
             processed_tokens.append(t)
@@ -281,15 +265,18 @@ def get_stopword_candidates_step4(tf_idf: dict, vocabularies: dict, threshold: f
     """
 
     word_counts = {}  # counts of zero TF-IDF appearances per word
+    # Near zero threshold to account for float errors
+    threshold = 1e-9
     for category, matrix in tf_idf.items():
         vocabulary = vocabularies[category]
         # Compute sums TF-IDF for each word in this category, since sum is 0 for
         # category if that word has appeared in all documents or none of them.
+        ndocs = matrix.shape[0]
         word_tf_idf_sums = np.sum(matrix, axis=0)
         for i, word in enumerate(vocabulary):
             if word not in word_counts:
                 word_counts[word] = 0
-            if word_tf_idf_sums[i] <= 0:
+            if word_tf_idf_sums[i] <= ndocs*threshold:
                 word_counts[word] += 1
     # Select words where zero-TF-IDF appears in >= threshold fraction of categories
     stopwords_set = {word for word, count in word_counts.items() if count / len(tf_idf) >= threshold}
@@ -306,6 +293,37 @@ def step_0(reuters_path: str, nps_chat_path: str):
     pickle_write(reuters_path, categorize_reuters())
     pickle_write(nps_chat_path, categorize_nps_chat())
 
+def plot_stopword_proportions(category_prop_stopword: dict, result_path: str = None):
+    results = []
+    for category, prop in category_prop_stopword.items():
+        results.append(
+            {
+                'Category': category,
+                'Stopword Proportion (%)': prop * 100
+            }
+        )
+    # create a new DataFrame
+    df = pd.DataFrame(results)
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    sns.barplot(
+        x='Stopword Proportion (%)',
+        y='Category',
+        data=df.sort_values('Stopword Proportion (%)', ascending=False),
+        palette='viridis'
+    )
+    plt.title('Stopword Proportion by Category [Task 1]')
+    plt.xlabel('Proportion of Stopwords (%)')
+    plt.ylabel('Label Category')
+    if result_path:
+        filename = result_path+"category_prop.png"
+        path = Path(filename).expanduser().resolve()
+        # Ensure parent directories exist
+        path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(path, dpi=300, bbox_inches="tight")
+    plt.show()
+
 def step_1(
         reuters_categories: dict,
         nps_categories: dict,
@@ -317,13 +335,23 @@ def step_1(
 
     dict[category] = (amount of stopwords in category) / (amount of tokens in category)
     """
+    reuters_prop = proportions_of_stopwords_by_category(reuters_categories)
     pickle_write(
-        reuters_result_path,
-        proportions_of_stopwords_by_category(reuters_categories)
+        reuters_result_path+"prop_stopwords.pkl",
+        reuters_prop
     )
+    nps_prop = proportions_of_stopwords_by_category(nps_categories)
     pickle_write(
-        nps_result_path,
-        proportions_of_stopwords_by_category(nps_categories)
+        nps_result_path+"prop_stopwords.pkl",
+        nps_prop
+    )
+    plot_stopword_proportions(
+        reuters_prop,
+        reuters_result_path
+    )
+    plot_stopword_proportions(
+        nps_prop,
+        nps_result_path
     )
 
 def step_2(
@@ -450,7 +478,7 @@ def step_4(
         nps_vocabularies: dict,
         reuter_result_path: str,
         nps_result_path: str,
-        threshold: float = 0.15
+        threshold: float = 0.50
     ):
     """
     Find top 100 stopwords for reuter and nps assuming word"s TF-IDF score is 0 at least in threshold of corpus" categories for each corpus
@@ -702,7 +730,7 @@ def word_score2df(word_score: dict):
             {
                 "word": word,
                 "phi": avg_chara,
-                "abs delta": avg_disc,
+                "abs delta": abs(avg_disc),
                 "stopword score": avg_score,
                 "count": count
             }
@@ -726,10 +754,10 @@ def step_7(
         x_key="phi",
         y_key="abs delta",
         hue_key="abs delta",
-        xlab = "phi",
-        ylab = "abs delta",
+        xlab = "Characteristic (φ)",
+        ylab = "Absolute Discriminant (|δ|)",
         title="Top 50 Stopwords (Reuters)",
-        legend_title="abs delta",
+        legend_title="Absolute Discriminant (|δ|)",
         result_path=reuter_result_path
     )
 
@@ -740,11 +768,11 @@ def step_7(
         nps_top50,
         x_key="phi",
         y_key="abs delta",
-        xlab="phi",
-        ylab="abs delta",
+        xlab="Characteristic (φ)",
+        ylab="Absolute Discriminant (|δ|)",
         hue_key="abs delta",
         title="Top 50 Stopwords (Nps chat)",
-        legend_title="abs delta",
+        legend_title="Absolute Discriminant (|δ|)",
         result_path=nps_result_path
     )
 
@@ -809,8 +837,8 @@ def step_8(
         y_key="abs delta",
         cluster_key="cluster",
         title=f"K-Means Clustering of Top {TOP_N_CLUSTER} Stopwords (k={NUM_CLUSTERS}) (Reuters)",
-        xlab="Absolute Charasteristic Capability",
-        ylab="Discriminant Capability",
+        xlab="Characteristic (φ)",
+        ylab="Absolute Discriminant (|δ|)",
         legend_title="Cluster",
         result_path=reuter_result_path
     )
@@ -831,8 +859,8 @@ def step_8(
         y_key="abs delta",
         cluster_key="cluster",
         title=f"K-Means Clustering of Top {TOP_N_CLUSTER} Stopwords (k={NUM_CLUSTERS}) (Nps chat)",
-        xlab="Absolute Charasteristic Capability",
-        ylab="Discriminant Capability",
+        xlab="Characteristic (φ)",
+        ylab="Absolute Discriminant (|δ|)",
         legend_title="Cluster",
         result_path=nps_result_path
     )
@@ -892,8 +920,8 @@ def step_9(
         y_key="abs delta",
         cluster_key="cluster",
         title=f"K-Means Clustering of NLTK English Stopwords (k={NUM_CLUSTERS}) (Reuters)",
-        xlab="Phi (φ) Score - Characteristic Capability",
-        ylab="Absolute Delta (|δ|) Score - Discriminant Capability",
+        xlab="Characteristic (φ)",
+        ylab="Absolute Discriminant (|δ|)",
         legend_title="Cluster",
         result_path=reuters_result_path
     )
@@ -913,8 +941,8 @@ def step_9(
         y_key="abs delta",
         cluster_key="cluster",
         title=f"K-Means Clustering of NLTK English Stopwords (k={NUM_CLUSTERS}) (Nps chat)",
-        xlab="Phi (φ) Score - Characteristic Capability",
-        ylab="Absolute Delta (|δ|) Score - Discriminant Capability",
+        xlab="Characteristic (φ)",
+        ylab="Absolute Discriminant (|δ|)",
         legend_title="Cluster",
         result_path=nps_result_path
     )
@@ -1058,7 +1086,7 @@ def category_list2df(category_list: dict):
     )
     return df
 
-def plotRombus(df: pd.DataFrame):
+def plot_rombus(df: pd.DataFrame):
     plt.figure(figsize=(10, 10))
     sns.set_style("whitegrid")
     rhombus_x = [0, 1, 0, -1, 0]
@@ -1073,9 +1101,9 @@ def plotRombus(df: pd.DataFrame):
         s=50,  # Marker size
         zorder=2
     )
-    plt.title(r"Term Distribution in $\phi-\delta$ Space", fontsize=16)
-    plt.xlabel(r"Characteristic Capability ($\phi$)", fontsize=12)
-    plt.ylabel(r"Discriminant Capability ($\delta$)", fontsize=12)
+    plt.title(r"Word Distribution in $\phi-\delta$ Space", fontsize=16)
+    plt.xlabel(r"Characteristic ($\phi$)", fontsize=12)
+    plt.ylabel(r"Discriminant ($\delta$)", fontsize=12)
     # Add center lines
     plt.axhline(0, color="black", linewidth=0.5, zorder=1)
     plt.axvline(0, color="black", linewidth=0.5, zorder=1)
@@ -1101,6 +1129,7 @@ def main():
     nltk.download("wordnet", quiet=True)    # needed for pos tagging and lemmatization
     nltk.download("punkt_tab", quiet=True)  # needed for nltk word_tokenize()
     EN_STOPWORDS = set(stopwords.words("english")) # Has 198 stopwords
+
     w2v_model_path = "./w2v_model.pkl"
     fasText_model_path = "./fasText_model_path.pkl"
     glove_model_path = "./glove.pkl"
@@ -1132,8 +1161,8 @@ def main():
     # Step 1
     reuters_data_path = "./data/reuters/"
     nps_data_path = "./data/nps/"
-    reuters_prop_stopwords_path = reuters_data_path + "reuters_prop_stopwords.pkl"
-    nps_prop_stopwords_path = nps_data_path + "nps_prop_stopwords.pkl"
+    reuters_prop_stopwords_path = reuters_data_path + "step1/"
+    nps_prop_stopwords_path = nps_data_path + "step1/"
     if not all_paths_exist([reuters_prop_stopwords_path, nps_prop_stopwords_path]):
         print("Step 1, proportions of each NLTK English stopwords in each category")
         step_1(
@@ -1173,7 +1202,7 @@ def main():
     reuters_stopwords_path4 = reuters_data_path + "step4_stopwords/"
     nps_stopwords_path4 = nps_data_path + "step4_stopwords/"
     if not all_paths_exist([reuters_stopwords_path4, nps_stopwords_path4]):
-        print("\nStep4, calculating stopwords that have TF-IDF score of 0.0 in at least 20% of categories in each corpus")
+        print("\nStep4, calculating stopwords that have TF-IDF score of 0.0 in at least 50% of categories in each corpus")
         step_4(
             pickle_read(reuters_matrices_path + "category_matrix.pkl"),
             pickle_read(reuters_matrices_path + "category_vocabulary.pkl"),
@@ -1181,7 +1210,7 @@ def main():
             pickle_read(nps_matrices_path + "category_vocabulary.pkl"),
             reuters_stopwords_path4,
             nps_stopwords_path4,
-            threshold=0.20
+            threshold=0.50
         )
 
     # Step 5, not implemented, foreign language corpus (Duc vo)

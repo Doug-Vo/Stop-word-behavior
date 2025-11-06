@@ -132,7 +132,7 @@ pip install nltk pandas numpy scikit-learn gensim matplotlib seaborn
 The code (calculations.py) does all necessary calculations for the analysis and saves the results in the current directory by making necessary files and folders. Some graphical representations are also made and saved into .png files. 
 The code has been split into different steps and it will check whether the necessary steps have been completed by checking the current directory for the folders and files it should have created. If those files or directories are not found it will start to recompute everything.
 
-First time downloading all necessary models and corpuses may take time. Step 3 is relative slow and step 6 is extremely long (3 hours on I7-9700k processor). Other steps are rather quick.
+First time downloading all necessary models and corpuses may take time. Step 3 is relatively slow, step 6 is extremely long (3 hours on I7-9700k processor) and step 9 is relatively slow. Other steps are rather quick.
 
 ### 4. How to Run
 
